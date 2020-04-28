@@ -1166,7 +1166,7 @@ PUT /users/NAME
 with a request body similar to:
 
 ``` none
-{ 
+{
   "username":     "grant.mclennan",
   "display_name": "Grant McLennan",
   "email":        "grant@newlocation.com",
@@ -1182,7 +1182,7 @@ with a request body similar to:
 The response is similar to:
 
 ``` javascript
-{ 
+{
   "uri": "https://chef.example/users/grant.mclennan",
   "chef_key": {
     "name": "default",
@@ -1251,7 +1251,7 @@ returned.
 
 The `/users/USER/keys` endpoint has the following methods: `GET` and
 `POST`. User keys are public RSA keys in the SSL `.pem` file
-format and are used for authentication.  The Chef Infra Server 
+format and are used for authentication.  The Chef Infra Server
 does not save private keys for users.
 
 ### GET
@@ -1273,12 +1273,12 @@ The response is similar to:
 
 ``` javascript
 [
-  { 
+  {
     "name" : "default",
     "uri" : "https://chef.example/users/USER/keys/default",
     "expired" : false
   },
-  { 
+  {
     "name" : "key1",
     "uri" : "https://chef.example/users/USER/keys/key1",
     "expired" : false
@@ -1804,7 +1804,7 @@ The response is similar to:
 /clients
 --------
 
-Use the `/clients` endpoint to manage clients and their associated RSA 
+Use the `/clients` endpoint to manage clients and their associated RSA
 key-pairs. The `/clients` endpoint has the following methods: `GET` and `POST`.
 
 {{< note >}}
@@ -2231,7 +2231,7 @@ The response is similar to:
      "uri": "https://chef.example/organizations/example/clients/client1/keys/default",
      "expired": false
   },
-  { 
+  {
      "name": "key1",
      "uri": "https://chef.example/organizations/example/clients/client1/keys/key1",
      "expired": true
@@ -2537,8 +2537,8 @@ similar to:
 </tbody>
 </table>
 
-/containers
-                                                                   
+## /containers
+
 The `/containers` endpoint has the following methods: `GET`, `POST`.
 
 ### GET
@@ -6935,7 +6935,7 @@ The response is similar to:
   "env_run_lists": {
     "env1": {
       "recipe[foo1]"
-    }  
+    }
   },
   "run_list": [
     "recipe[apache2]"
