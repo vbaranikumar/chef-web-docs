@@ -25,6 +25,7 @@ Syntax
 
 A custom resource is defined as a Ruby file and is located in a cookbook's ``/resources`` directory. This file
 
+* Declares what resource it provides
 * Declares the properties of the custom resource
 * Loads current state of properties, if the resource already exists
 * Defines each action the custom resource may take
@@ -32,6 +33,7 @@ A custom resource is defined as a Ruby file and is located in a cookbook's ``/re
 The syntax for a custom resource is. For example:
 
 .. code-block:: ruby
+   provides :custom_name
 
    property :property_name, RubyType, default: 'value'
 
@@ -55,9 +57,10 @@ Example
 -----------------------------------------------------
 .. tag custom_resources_syntax_example
 
-This example ``site`` utilizes Chef's built in ``file``, ``service`` and ``package`` resources, and includes ``:create`` and ``:delete`` actions. Since it uses built in Chef resources, besides defining the property and actions, the code is very similar to that of a recipe.
+This example ``web_site`` utilizes Chef's built in ``file``, ``service`` and ``package`` resources, and includes ``:create`` and ``:delete`` actions. Since it uses built in Chef resources, besides defining the property and actions, the code is very similar to that of a recipe.
 
 .. code-block:: ruby
+   provides :web_site
 
    property :homepage, String, default: '<h1>Hello world!</h1>'
 
@@ -85,11 +88,11 @@ where
 * the ``action`` block uses the built-in collection of resources to tell the chef-client how to install Apache, start the service, and then create the contents of the file located at ``/var/www/html/index.html``
 * ``action :create`` is the default resource, because it is listed first; ``action :delete`` must be called specifically (because it is not the default resource)
 
-Once built, the custom resource may be used in a recipe just like any of the resources that are built into Chef. The resource gets its name from the cookbook and from the file name in the ``/resources`` directory, with an underscore (``_``) separating them. For example, a cookbook named ``exampleco`` with a custom resource named ``site.rb`` is used in a recipe like this:
+Once built, the custom resource may be used in a recipe just like any of the resources that are built into Chef.  Its use in a recipe looks like this:
 
 .. code-block:: ruby
 
-   exampleco_site 'httpd' do
+   web_site 'httpd' do
      homepage '<h1>Welcome to the Example Co. website!</h1>'
    end
 
@@ -97,45 +100,27 @@ and to delete the exampleco website, do the following:
 
 .. code-block:: ruby
 
-   exampleco_site 'httpd' do
+   web_site 'httpd' do
      action :delete
    end
 
 .. end_tag
 
-resource_name
+provides
 -----------------------------------------------------
-.. note:: .. tag ruby_style_patterns_hyphens
+.. tag dsl_custom_resource_method_provides
 
-          Cookbook and custom resource names should contain only alphanumeric characters. A hyphen (``-``) is a valid character and may be used in cookbook and custom resource names, but it is discouraged. The chef-client will return an error if a hyphen is not converted to an underscore (``_``) when referencing from a recipe the name of a custom resource in which a hyphen is located.
+The ``provides`` method is how a custom resource is associated with recipe code.  By default all resources that do not declare what resource they provide can be used by combining their cookbook name
+with name of the file they are declared in.  For example, a cookbook named ``website`` and a custom resource file named ``httpd`` is by default used in a recipe with ``website_httpd``.  This default
+will be overridden by including any ``provides`` method in the resource.  Explicitly using a ``provides`` line to declare what resource is being provided in the file is considered a best practice.
 
-          .. end_tag
+.. tag dsl_custom_resource_method_provides_name_example
 
-.. tag dsl_custom_resource_method_resource_name
-
-Use the ``resource_name`` method at the top of a custom resource to declare a custom name for that resource. For example:
-
-.. code-block:: ruby
-
-   resource_name :custom_name
-
-where ``:custom_name`` is the resource name as it may be used in a recipe. For example, a cookbook named ``website`` and a custom resource file named ``httpd`` is by default used in a recipe with ``website_httpd``. If ``:custom_name`` is ``web_httpd`` then it may be used like this:
+For example, the ``site.rb`` file in the ``website`` cookbook could be assigned a custom resource name like this:
 
 .. code-block:: ruby
 
-   web_httpd 'name' do
-     # properties
-   end
-
-.. end_tag
-
-.. tag dsl_custom_resource_method_resource_name_example
-
-For example, the ``httpd.rb`` file in the ``website`` cookbook could be assigned a custom resource name like this:
-
-.. code-block:: ruby
-
-   resource_name :httpd
+   provides :web_site
 
    property :homepage, String, default: '<h1>Hello world!</h1>'
 
@@ -155,12 +140,49 @@ and is then usable in a recipe like this:
 
 .. code-block:: ruby
 
-   httpd 'build website' do
+   web_site 'build website' do
      homepage '<h1>Welcome to the Example Co. website!</h1>'
      action :create
    end
 
 .. end_tag
+
+This allows you to use multiple custom resources files that provide the same resource to the user, but for different operating systems or operation system versions. With this you can eliminate the need for platform or platform version logic within your resources.
+
+For example:
+
+.. code-block:: ruby
+
+    provides :my_custom_resource, platform: 'redhat', platform_version: ">= 7"
+
+    provides :my_custom_resource, platform: 'redhat'
+
+    provides :my_custom_resource, platform_family: 'rhel'
+
+    provides :my_custom_resource, os: 'linux'
+
+    provides :my_custom_resource
+
+.. end_tag
+
+When multiple custom resources use the same DSL, specificity rules are applied to determine the priority.  The more specific the rule, the higher the priority.  Examples of the priorities from highest to lowest are:
+
+#. provides :my_custom_resource, platform: 'ubuntu', platform_version: ‘10.04’
+#. provides :my_custom_resource, platform: ‘ubuntu’
+#. provides :my_custom_resource, platform_family: ‘rhel’
+#. provides :my_custom_resource, os: ‘windows’
+#. provides :my_custom_resource
+
+If one file declares ``provides :my_custom_resource`` that will be the default resource for all operating systems.  If another file declares ``provides :my_custom_resource, platform_family: 'rhel'`` that file
+will override the default and be the version used on the RedHat Enterprise family of operating systems.
+
+provides
+-----------------------------------------------------
+.. note:: .. tag ruby_style_patterns_hyphens
+
+          Cookbook and custom resource filenames, along with provides statements should contain only alphanumeric characters. A hyphen (``-``) is a valid character and may be used in cookbook and custom resource names, but it is discouraged.  When called from a recipe any hyphens in cookbook names or resource filenames must be converted to an underscore (``_``), this is a strict limitation of the underlying Ruby language (hyphens are interpreted as the minus operator).
+
+          .. end_tag
 
 Scenario: website Resource
 =====================================================
@@ -675,7 +697,7 @@ Custom resources are designed to use core resources that are built into Chef. In
 
 .. code-block:: ruby
 
-   resource_name :node_execute
+   provides :node_execute
 
    property :command, String, name_property: true
    property :version, String
@@ -718,7 +740,7 @@ To prevent this behavior, use ``new_resource.`` to tell the chef-client to proce
 
 .. code-block:: ruby
 
-   resource_name :node_execute
+   provides :node_execute
 
    property :command, String, name_property: true
    property :version, String
@@ -957,7 +979,7 @@ Any properties that are marked ``identity: true`` or ``desired_state: false`` wi
 
 .. code-block:: ruby
 
-   resource_name :file
+   provides :file
 
    load_current_value do |desired|
      puts "The user typed content = #{desired.content} in the resource"
@@ -997,38 +1019,6 @@ For example, the following custom resource creates and/or updates user propertie
 
 .. end_tag
 
-provides
------------------------------------------------------
-.. tag dsl_custom_resource_method_provides
-
-Use the ``provides`` method to associate a custom resource with the Recipe DSL on different operating systems. When multiple custom resources use the same DSL, specificity rules are applied to determine the priority, from highest to lowest:
-
-#. provides :resource_name, platform_version: ‘0.1.2’
-#. provides :resource_name, platform: ‘platform_name’
-#. provides :resource_name, platform_family: ‘platform_family’
-#. provides :resource_name, os: ‘operating_system’
-#. provides :resource_name
-
-For example:
-
-.. code-block:: ruby
-
-    provides :my_custom_resource, platform: 'redhat' do |node|
-      node['platform_version'].to_i >= 7
-    end
-
-    provides :my_custom_resource, platform: 'redhat'
-
-    provides :my_custom_resource, platform_family: 'rhel'
-
-    provides :my_custom_resource, os: 'linux'
-
-    provides :my_custom_resource
-
-This allows you to use multiple custom resources files that provide the same resource to the user, but for different operating systems or operation system versions. With this you can eliminate the need for platform or platform version logic within your resources.
-
-.. end_tag
-
 override
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
 .. tag dsl_custom_resource_method_provides_override
@@ -1058,6 +1048,13 @@ This will emit a warning that ``Y`` is overriding ``X``. To disable this warning
    end
 
 .. end_tag
+
+.. tag dsl_custom_resource_method_resource_name
+
+Use the ``resource_name`` method at the top of a custom resource to declare a custom display name for that resource.  As of Chef 16, this does not set the name to be used in recipe code and is used only
+only for display output.  As of Chef 16 this declaration is unnecessary and the display name will be taken from the first provides line which is declared (or the default name constructed from the cookbook
+name and the filename the resource is declared in).
+
 
 reset_property
 -----------------------------------------------------
